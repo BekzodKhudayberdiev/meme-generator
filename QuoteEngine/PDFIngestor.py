@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import tempfile
 from typing import List
@@ -32,17 +33,15 @@ class PDFIngestor(IngestorInterface):
                     f'pdftotext failed for {path}: {result.stderr}'
                 )
 
-            quotes = []
             with open(tmp_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if ' - ' not in line:
-                        continue
-                    body, author = line.rsplit(' - ', 1)
-                    body = body.strip().strip('"')
-                    author = author.strip()
-                    if body and author:
-                        quotes.append(QuoteModel(body, author))
+                text = f.read()
+
+            quotes = []
+            for match in re.finditer(r'"([^"]+)"\s*-\s*([^\n"]+)', text):
+                body = match.group(1).strip()
+                author = match.group(2).strip()
+                if body and author:
+                    quotes.append(QuoteModel(body, author))
             return quotes
         finally:
             os.remove(tmp_path)
